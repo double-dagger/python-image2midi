@@ -1,0 +1,15 @@
+attrs==20.2.0
+Automat==20.2.0
+constantly==15.1.0
+hyperlink==20.0.1
+idna==2.10
+incremental==17.5.0
+mido==1.2.9
+numpy==1.19.2
+opencv-python @ file:///tmp/opencv-python/opencv_python-4.4.0%2Bed8acbc-cp38-cp38-linux_x86_64.whl
+PyHamcrest==2.0.2
+python-rtmidi==1.4.6
+rtmidi==2.3.4
+six==1.15.0
+Twisted==20.3.0
+zope.interface==5.1.2
