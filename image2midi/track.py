@@ -20,8 +20,8 @@ class Track(object):
     def __init__(self, image_path, port_name, bpm, control_channel=None):
         self.control_channel = control_channel
 
-#        self.image = image2midi.backends.bwcluster.Image(self, image_path)
-        self.image = image2midi.backends.rgbcluster.Image(self, image_path)
+        self.image = image2midi.backends.bwcluster.Image(self, image_path)
+#        self.image = image2midi.backends.rgbcluster.Image(self, image_path)
         self.image.show_image(wait_interval=100)
 
         self.outport = mido.open_output(port_name)

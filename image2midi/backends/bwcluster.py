@@ -42,11 +42,21 @@ class Image(image2midi.backends.common.ClusterImage):
         ]=self._im2[
             self._y:self._y2(), self._x:self._x2()
         ]
-        ##resized_im = self.resize_im(im)
-#        cv2.namedWindow('Image', cv2.WND_PROP_FULLSCREEN)
-#        cv2.setWindowProperty(
-#            'Image', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN
-#        )
+
+        im = cv2.copyMakeBorder(
+            im,
+            top=200,
+            bottom=200,
+            left=448,
+            right=448,
+            borderType=cv2.BORDER_CONSTANT,
+            value=0
+        )
+
+        cv2.namedWindow('Image', cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty(
+            'Image', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN
+        )
         cv2.imshow('Image', im)
         cv2.waitKey(wait_interval)
 
