@@ -1,6 +1,8 @@
 
 import time
 import logging
+import json
+import os.path
 logger = logging.getLogger('track')
 
 import twisted.internet.reactor
@@ -36,6 +38,9 @@ class Track(object):
             else:
                 self.channels.append(image2midi.note.MonophonicNoteChannel(self, i))
 
+        # Load previous CC settings
+        self.load_cc()
+
         # Add cleanup function before shutdown
         # to stop all playing notes when program is stopped.
         twisted.internet.reactor.addSystemEventTrigger(
@@ -69,6 +74,8 @@ class Track(object):
         if (hasattr(cc, 'channel') and
                 cc.channel == self.control_channel):
 
+            self.save_cc(cc)
+
             if cc.control == 20:
                 self.set_bpm(cc.value)
             if cc.control == 85 and cc.value == 0:
@@ -78,6 +85,32 @@ class Track(object):
 
             if cc.control == 117:
                 self.stopped = cc.value == 127
+
+    def save_cc(self, cc):
+        try:
+            with open('/tmp/midi_image.config.json', 'r') as f:
+                cc_json = json.load(f) or {}
+        except:
+            cc_json = {}
+        cc_json[cc.control] = cc.value
+        with open('/tmp/midi_image.config.json', 'w') as f:
+            json.dump(cc_json, f)
+
+    def load_cc(self):
+        try:
+            with open('/tmp/midi_image.config.json', 'r') as f:
+                cc_json = json.load(f) or {}
+        except:
+            cc_json = {}
+        for cc_item in cc_json.items():
+            cc = mido.Message(
+                'control_change',
+                channel = self.control_channel,
+                control = int(cc_item[0]),
+                value = cc_item[1],
+            )
+            logger.debug('Loaded CC: {0}'.format(cc))
+            self.midi_callback(cc)
 
     def restart(self):
         self.image.restart()
