@@ -144,7 +144,7 @@ class ClusterImage(Image):
             return None
         if value < self._note_threshold_min:
             return None
-        return min(int(value/self._note_div)*self._note_mult + 24, 127)
+        return min(int(value/self._note_div)*self._note_mult, 127)
 
     def midi_cc(self, cc):
         if cc.control == 28:
@@ -194,7 +194,73 @@ class ClusterImage(Image):
     def next_cluster(self):
         cluster = self.get_cluster()
         cluster.play()
-        self.show_image(rect_color=cluster.color)
+
+        self.show_image(rect_color=hasattr(cluster, 'color') and cluster.color or 0 )
 
         # proceed in image
         self._x, self._y = self.step(steps_x=1)
+
+
+class SequenceCluster(Cluster):
+    steps = 8
+    sequence_div = 6
+    sequences = [None, None]
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.step_length = self.image.track.step_length / self.steps
+
+    def play(self):
+        """
+        """
+        super().play()
+
+    def play_value(self, channel, value):
+        value = self.image.value_to_note(value)
+        if value is None:
+            self.sequences[channel] = [None, None, None, None, None, None, None, None]
+        elif value < self.sequence_div:
+            self.sequences[channel] = [None, 8, None, None, None, None, None, None]
+        elif value < self.sequence_div*2:
+            self.sequences[channel] = [None, 12, None, None, None, None, None, None]
+        elif value < self.sequence_div*3:
+            self.sequences[channel] = [None, 12, None, 12, None, None, None, None]
+        elif value < self.sequence_div*4:
+            self.sequences[channel] = [None, 12, None, 24, None, None, 12, None]
+        elif value < self.sequence_div*5:
+            self.sequences[channel] = [None, 12, None, 24, None, None, 18, 18]
+        elif value < self.sequence_div*6:
+            self.sequences[channel] = [None, 12, None, 24, 12, None, 18, 18]
+        elif value < self.sequence_div*7:
+            self.sequences[channel] = [None, 12, 12, 24, 12, None, 18, 18]
+        else:
+            self.sequences[channel] = [12, 12, 12, 24, 12, None, 18, 18]
+        logger.debug('seq: {0}'.format(self.sequences[channel]))
+        if channel == 1:
+            twisted.internet.reactor.callLater(
+                self.step_length / 8,
+                self.play_step,
+                0, channel,
+            )
+        else:
+            self.play_step(0, channel)
+
+    def play_step(self, i, channel):
+        """
+        """
+        ch = self.image.track.channels[channel]
+        note = self.sequences[channel][i]
+        if note is not None:
+            ch.add_note(note)
+            twisted.internet.reactor.callLater(
+                self.step_length / 2,
+                ch.stop_note,
+                note
+            )
+        i += 1
+        if i < len(self.sequences[channel]):
+            twisted.internet.reactor.callLater(
+                self.step_length,
+                self.play_step,
+                i, channel,
+            )

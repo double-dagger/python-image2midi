@@ -51,7 +51,7 @@ class Track(object):
         prev_bpm = self.bpm
         self.bpm = bpm
         # 8-tackt(?! WTF)
-        self.bpm *= 8
+        ## self.bpm *= 8
         # Initialize step length from BPM
         if self.bpm == 0:
             self.bpm_step_length = 0
