@@ -19,8 +19,9 @@ class Track(object):
     channels = []
     stopped = False
 
-    def __init__(self, image_path, port_name, bpm, control_channel=None):
+    def __init__(self, image_path, port_name, bpm, config_file, control_channel=None):
         self.control_channel = control_channel
+        self.config_file = config_file
 
         self.image = image2midi.backends.bwcluster.Image(self, image_path)
 #        self.image = image2midi.backends.rgbcluster.Image(self, image_path)
@@ -88,17 +89,17 @@ class Track(object):
 
     def save_cc(self, cc):
         try:
-            with open('/tmp/midi_image.config.json', 'r') as f:
+            with open(self.config_file, 'r') as f:
                 cc_json = json.load(f) or {}
         except:
             cc_json = {}
         cc_json[cc.control] = cc.value
-        with open('/tmp/midi_image.config.json', 'w') as f:
+        with open(self.config_file, 'w') as f:
             json.dump(cc_json, f)
 
     def load_cc(self):
         try:
-            with open('/tmp/midi_image.config.json', 'r') as f:
+            with open(self.config_file, 'r') as f:
                 cc_json = json.load(f) or {}
         except:
             cc_json = {}

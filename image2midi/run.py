@@ -39,6 +39,12 @@ if __name__ == '__main__':
         type='int',
         default=15
     )
+    p.add_option(
+        '--config',
+        dest='config_file',
+        help='Configuration file to store / load from.',
+        default='/tmp/midi_image.config.json'
+    )
 
     (options, args) = p.parse_args()
 
@@ -48,6 +54,7 @@ if __name__ == '__main__':
         port_name=options.port_name,
         bpm=options.bpm,
         control_channel=options.control_channel,
+        config_file=options.config_file,
     )
 
     # Create loop and run
