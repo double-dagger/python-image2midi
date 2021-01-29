@@ -8,7 +8,10 @@ import cv2
 
 SIZE_IMAGE = (900, 600)
 SIZE_DISPLAY = (1024, 600)
-BORDER_ADD = (int((SIZE_DISPLAY[0] - SIZE_IMAGE[0]) / 2), int((SIZE_DISPLAY[1] - SIZE_IMAGE[1]) / 2))
+BORDER_ADD = (
+	int((SIZE_DISPLAY[0] - SIZE_IMAGE[0]) / 2),
+    int((SIZE_DISPLAY[1] - SIZE_IMAGE[1]) / 2)
+)
 
 class Cluster(object):
     channels = []
