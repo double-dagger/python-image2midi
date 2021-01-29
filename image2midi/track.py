@@ -2,30 +2,31 @@
 import time
 import logging
 import json
+import os
 import os.path
+import pkgutil
+import importlib
 logger = logging.getLogger('track')
 
 import twisted.internet.reactor
 import mido
 
 import image2midi.note
-import image2midi.backends.bwcluster
-import image2midi.backends.rgbcluster
+import image2midi.backends
 
 class Track(object):
     bpm = None
+    image = None
     last_time = None
     step_length = 0.0
     channels = []
     stopped = False
+    index_image = 0
+    index_backend = 0
 
-    def __init__(self, image_path, port_name, bpm, config_file, control_channel=None):
+    def __init__(self, image_dir, port_name, bpm, config_file, control_channel=None):
         self.control_channel = control_channel
         self.config_file = config_file
-
-        self.image = image2midi.backends.bwcluster.Image(self, image_path)
-#        self.image = image2midi.backends.rgbcluster.Image(self, image_path)
-        self.image.show_image(wait_interval=100)
 
         self.outport = mido.open_output(port_name)
         self.inport = mido.open_input(port_name, callback=self.midi_callback)
@@ -39,14 +40,68 @@ class Track(object):
             else:
                 self.channels.append(image2midi.note.MonophonicNoteChannel(self, i))
 
-        # Load previous CC settings
-        self.load_cc()
+        # Find all images in image_dir
+        self.find_image_paths(image_dir)
+
+        # Import available backends
+        self.import_backends()
+
+        # Load settings from file
+
+        # Init image
+        self.init_image()
 
         # Add cleanup function before shutdown
         # to stop all playing notes when program is stopped.
         twisted.internet.reactor.addSystemEventTrigger(
             'before', 'shutdown', self.cleanup
         )
+
+    def next_image(self):
+        self.load_image_index(self.index_image + 1)
+
+    def prev_image(self):
+        self.load_image_index(self.index_image - 1)
+
+    def load_image_index(self, index):
+        if index < 0:
+            index = len(self.image_paths) - 1
+        if index >= len(self.image_paths):
+            index = 0
+        index = max(index, 0)
+        index = min(index, len(self.image_paths))
+        self.index_image = index
+        self.init_image()
+        self.restart()
+
+    def find_image_paths(self, image_dir):
+        self.image_paths = []
+        for (dirpath, dirnames, filenames) in os.walk(image_dir):
+            dirnames.sort()
+            filenames.sort()
+            for filename in filenames:
+                if os.path.splitext(filename)[1].lower() in ('.jpg', '.jpeg', '.png'):
+                    self.image_paths.append(os.path.join(dirpath, filename))
+
+    def import_backends(self):
+        self.backends = []
+        for _, modname, _ in pkgutil.walk_packages(
+            image2midi.backends.__path__,
+            image2midi.backends.__name__ + '.'
+        ):
+            if modname == 'image2midi.backends.common':
+                # Skip common
+                continue
+            self.backends.append(
+                importlib.import_module(modname)
+            )
+
+    def init_image(self):
+        if self.image is not None:
+            del self.image
+        self.image = self.backends[self.index_backend].Image(self, self.image_paths[self.index_image])
+        self.image.show_image()
+        self.load_cc()
 
     def cleanup(self):
         self.set_bpm(0)
@@ -75,17 +130,30 @@ class Track(object):
         if (hasattr(cc, 'channel') and
                 cc.channel == self.control_channel):
 
-            self.save_cc(cc)
+            if cc.type == 'control_change':
+                self.midi_cc(cc)
+            if cc.type == 'note_on':
+                self.midi_note_on(cc)
 
-            if cc.control == 20:
-                self.set_bpm(cc.value)
-            if cc.control == 85 and cc.value == 0:
-                self.restart()
+    def midi_note_on(self, cc):
+        print(cc)
+        if cc.note == 44:
+            twisted.internet.reactor.callLater(0.01, self.next_image)
+        if cc.note == 36:
+            twisted.internet.reactor.callLater(0.01, self.prev_image)
 
-            self.image.midi_cc(cc)
+    def midi_cc(self, cc):
+        self.save_cc(cc)
 
-            if cc.control == 117:
-                self.stopped = cc.value == 127
+        if cc.control == 20:
+            self.set_bpm(cc.value)
+        if cc.control == 85 and cc.value == 0:
+            self.restart()
+
+        self.image.midi_cc(cc)
+
+        if cc.control == 117:
+            self.stopped = cc.value == 127
 
     def save_cc(self, cc):
         try:
