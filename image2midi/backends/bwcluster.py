@@ -35,31 +35,6 @@ class Image(image2midi.backends.common.ClusterImage):
         self._im2 = cv2.blur(self._im2, (5,5))
         self._im2 = cv2.Canny(self._im2,10,100)
 
-    def show_image(self, wait_interval=1, rect_color=0):
-        im = copy.copy(self._im)
-        im[
-            self._y:self._y2(), self._x:self._x2()
-        ]=self._im2[
-            self._y:self._y2(), self._x:self._x2()
-        ]
-
-        im = cv2.copyMakeBorder(
-            im,
-            top=200,
-            bottom=200,
-            left=448,
-            right=448,
-            borderType=cv2.BORDER_CONSTANT,
-            value=0
-        )
-
-        cv2.namedWindow('Image', cv2.WND_PROP_FULLSCREEN)
-        cv2.setWindowProperty(
-            'Image', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN
-        )
-        cv2.imshow('Image', im)
-        cv2.waitKey(wait_interval)
-
     def get_cluster(self):
         return self.cluster_class(
             self,
