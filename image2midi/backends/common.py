@@ -266,6 +266,7 @@ class SequenceCluster(Cluster):
             pick from inside
 
         """
+        value *= self.image._note_mult
         if value > self.image._note_threshold_max:
             return None
         if value < self.image._note_threshold_min:
