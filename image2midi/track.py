@@ -65,14 +65,19 @@ class Track(object):
         )
 
     def shutdown_with_exitcode(self):
-        if 1:
-            os._exit(self.exit_counter)
+        os._exit(self.exit_counter)
 
     def next_image(self):
         self.load_image_index(self.index_image + 1)
 
     def prev_image(self):
         self.load_image_index(self.index_image - 1)
+
+    def next_backend(self):
+        self.load_backend_index(self.index_backend + 1)
+
+    def prev_backend(self):
+        self.load_backend_index(self.index_backend - 1)
 
     def load_image_index(self, index):
         if index < 0:
@@ -82,6 +87,17 @@ class Track(object):
         index = max(index, 0)
         index = min(index, len(self.image_paths))
         self.index_image = index
+        self.init_image()
+        self.restart()
+
+    def load_backend_index(self, index):
+        if index < 0:
+            index = len(self.backends) - 1
+        if index >= len(self.backends):
+            index = 0
+        index = max(index, 0)
+        index = min(index, len(self.backends))
+        self.index_backend = index
         self.init_image()
         self.restart()
 
@@ -162,6 +178,10 @@ class Track(object):
             twisted.internet.reactor.callLater(0.01, self.next_image)
         if cc.note == 36:
             twisted.internet.reactor.callLater(0.01, self.prev_image)
+        if cc.note == 45:
+            twisted.internet.reactor.callLater(0.01, self.next_backend)
+        if cc.note == 37:
+            twisted.internet.reactor.callLater(0.01, self.prev_backend)
         if cc.note == 43:
             self.exit_mode = True
         if cc.note == 42 and self.exit_mode:
