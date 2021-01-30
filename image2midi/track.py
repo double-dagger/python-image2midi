@@ -2,6 +2,7 @@
 import time
 import logging
 import json
+import sys
 import os
 import os.path
 import pkgutil
@@ -23,6 +24,8 @@ class Track(object):
     stopped = False
     index_image = 0
     index_backend = 0
+    exit_mode = False
+    exit_counter = 0
 
     def __init__(self, image_dir, port_name, bpm, config_file, control_channel=None):
         self.control_channel = control_channel
@@ -56,6 +59,14 @@ class Track(object):
         twisted.internet.reactor.addSystemEventTrigger(
             'before', 'shutdown', self.cleanup
         )
+
+        twisted.internet.reactor.addSystemEventTrigger(
+            'after', 'shutdown', self.shutdown_with_exitcode
+        )
+
+    def shutdown_with_exitcode(self):
+        if 1:
+            os._exit(self.exit_counter)
 
     def next_image(self):
         self.load_image_index(self.index_image + 1)
@@ -134,6 +145,16 @@ class Track(object):
                 self.midi_cc(cc)
             if cc.type == 'note_on':
                 self.midi_note_on(cc)
+            if cc.type == 'note_off':
+                self.midi_note_off(cc)
+
+    def midi_note_off(self, cc):
+        if cc.note == 43:
+            if self.exit_counter > 0:
+                twisted.internet.reactor.stop()
+            else:
+                self.exit_mode = False
+                self.exit_counter = 0
 
     def midi_note_on(self, cc):
         print(cc)
@@ -141,6 +162,10 @@ class Track(object):
             twisted.internet.reactor.callLater(0.01, self.next_image)
         if cc.note == 36:
             twisted.internet.reactor.callLater(0.01, self.prev_image)
+        if cc.note == 43:
+            self.exit_mode = True
+        if cc.note == 42 and self.exit_mode:
+            self.exit_counter += 1
 
     def midi_cc(self, cc):
         self.save_cc(cc)
