@@ -49,8 +49,6 @@ class Track(object):
         # Import available backends
         self.import_backends()
 
-        # Load settings from file
-
         # Init image
         self.init_image()
 
@@ -128,6 +126,7 @@ class Track(object):
             del self.image
         self.image = self.backends[self.index_backend].Image(self, self.image_paths[self.index_image])
         self.image.show_image()
+        self.set_bpm(self.bpm)
         self.load_cc()
 
     def cleanup(self):
@@ -145,6 +144,8 @@ class Track(object):
             self.bpm_step_length = 0
         else:
             self.bpm_step_length = 60 / self.bpm
+        if self.image and hasattr(self.image, 'bpm_multiplier') and self.image.bpm_multiplier:
+            self.bpm_step_length /= self.image.bpm_multiplier
         if prev_bpm == 0 and self.bpm != 0:
             # Restart clock if bpm raised from zero.
             self.on_clock()

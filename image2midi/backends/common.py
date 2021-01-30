@@ -220,10 +220,14 @@ class ClusterImage(Image):
         cluster = self.get_cluster()
         cluster.play()
 
-        self.show_image(rect_color=hasattr(cluster, 'color') and cluster.color or 0 )
+        rect_color = 0
+        if hasattr(cluster, 'color'):
+            rect_color = cluster.color
+        self.show_image(rect_color=rect_color)
 
         # proceed in image
         self._x, self._y = self.step(steps_x=1)
+
 
 xx = None
 class SequenceCluster(Cluster):
