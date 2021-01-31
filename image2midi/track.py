@@ -37,7 +37,7 @@ class Track(object):
         self.set_bpm(bpm)
 
         # Init outport channel wrappers
-        for i in range(0,16):
+        for i in range(0,10):
             if i == 9:
                 self.channels.append(image2midi.note.NoteChannel(self, i))
             else:
@@ -127,12 +127,16 @@ class Track(object):
         self.image = self.backends[self.index_backend].Image(self, self.image_paths[self.index_image])
         self.image.show_image()
         self.set_bpm(self.bpm)
+        self.stop_all_notes()
         self.load_cc()
+
+    def stop_all_notes(self):
+        for channel in self.channels:
+            channel.stop_all_notes()
 
     def cleanup(self):
         self.set_bpm(0)
-        for channel in self.channels:
-            channel.stop_all_notes()
+        self.stop_all_notes()
 
     def set_bpm(self, bpm):
         prev_bpm = self.bpm
