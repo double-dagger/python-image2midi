@@ -24,6 +24,7 @@ class Track(object):
     stopped = False
     index_image = 0
     index_backend = 0
+    switch_dirs_mode = False
     exit_mode = False
     exit_counter = 0
 
@@ -65,37 +66,25 @@ class Track(object):
     def shutdown_with_exitcode(self):
         os._exit(self.exit_counter)
 
-    def next_image(self):
-        self.load_image_index(self.index_image + 1)
+    def switch_image(self, d_index, switch_dirs=False):
+        if switch_dirs:
+            # In switch dirs mode find the first image in different dir
+            # in given direction.
+            # When going backwards, it results in the last image of dir
+            act_dir = new_dir = os.path.dirname(self.image_paths[self.index_image])
+            step = max(min(d_index, 1), -1)
+            while act_dir == new_dir:
+                self.index_image = ( self.index_image + d_index ) % len(self.image_paths)
+                new_dir = os.path.dirname(self.image_paths[self.index_image])
+        else:
+            self.index_image = ( self.index_image + d_index ) % len(self.image_paths)
+        self.reload_image()
 
-    def prev_image(self):
-        self.load_image_index(self.index_image - 1)
+    def switch_backend(self, d_index):
+        self.index_backend = ( self.index_backend + d_index ) % len(self.backends)
+        self.reload_image()
 
-    def next_backend(self):
-        self.load_backend_index(self.index_backend + 1)
-
-    def prev_backend(self):
-        self.load_backend_index(self.index_backend - 1)
-
-    def load_image_index(self, index):
-        if index < 0:
-            index = len(self.image_paths) - 1
-        if index >= len(self.image_paths):
-            index = 0
-        index = max(index, 0)
-        index = min(index, len(self.image_paths))
-        self.index_image = index
-        self.init_image()
-        self.restart()
-
-    def load_backend_index(self, index):
-        if index < 0:
-            index = len(self.backends) - 1
-        if index >= len(self.backends):
-            index = 0
-        index = max(index, 0)
-        index = min(index, len(self.backends))
-        self.index_backend = index
+    def reload_image(self):
         self.init_image()
         self.restart()
 
@@ -176,23 +165,34 @@ class Track(object):
             else:
                 self.exit_mode = False
                 self.exit_counter = 0
+        if cc.note == 44:
+            self.switch_dirs_mode = False
 
     def midi_note_on(self, cc):
-        print(cc)
         if cc.note == 44:
-            twisted.internet.reactor.callLater(0.01, self.next_image)
-        if cc.note == 36:
-            twisted.internet.reactor.callLater(0.01, self.prev_image)
-        if cc.note == 45:
-            twisted.internet.reactor.callLater(0.01, self.next_backend)
-        if cc.note == 37:
-            twisted.internet.reactor.callLater(0.01, self.prev_backend)
+            self.switch_dirs_mode = True
         if cc.note == 43:
             self.exit_mode = True
         if cc.note == 42 and self.exit_mode:
             self.exit_counter += 1
 
+    def relative_cc_convert(self, cc):
+        if cc.value > 64:
+            return cc.value - 128
+        return cc.value
+
     def midi_cc(self, cc):
+        if cc.control == 21:
+            if cc.value > 0:
+                value = self.relative_cc_convert(cc)
+                twisted.internet.reactor.callLater(0.01, self.switch_image, value, self.switch_dirs_mode)
+            return
+        if cc.control == 22:
+            if cc.value > 0:
+                value = self.relative_cc_convert(cc)
+                twisted.internet.reactor.callLater(0.01, self.switch_backend, value)
+            return
+
         self.save_cc(cc)
 
         if cc.control == 20:
