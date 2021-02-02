@@ -39,15 +39,28 @@ if __name__ == '__main__':
         type='int',
         default=15
     )
+    p.add_option(
+        '--config',
+        dest='config_file',
+        help='Configuration file to store / load from.',
+        default='/tmp/midi_image.config.json'
+    )
+    p.add_option(
+        '--image-dir',
+        dest='image_dir',
+        help='Directory containing images to play. All *.jpg files will be added recursively',
+        default='/tmp',
+    )
 
     (options, args) = p.parse_args()
 
     # Initialize Track object
     track = image2midi.track.Track(
-        image_path=args[-1],
         port_name=options.port_name,
         bpm=options.bpm,
         control_channel=options.control_channel,
+        config_file=options.config_file,
+        image_dir=options.image_dir,
     )
 
     # Create loop and run

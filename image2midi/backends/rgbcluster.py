@@ -27,6 +27,7 @@ class Cluster(image2midi.backends.common.Cluster):
 
 
 class Image(image2midi.backends.common.ClusterImage):
+    bpm_multiplier = 8
     cluster_class = Cluster
     def __init__(self, parent, image_path):
         self.track = parent

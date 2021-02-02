@@ -9,7 +9,7 @@ import numpy as np
 import image2midi.backends.common
 
 
-class Cluster(image2midi.backends.common.Cluster):
+class Cluster(image2midi.backends.common.SequenceCluster):
     def __init__(self, parent, cluster, cluster2):
         super().__init__(parent)
         self.__cluster = cluster
@@ -25,7 +25,6 @@ class Cluster(image2midi.backends.common.Cluster):
 
 
 class Image(image2midi.backends.common.ClusterImage):
-    bpm_multiplier = 8
     cluster_class = Cluster
 
     def __init__(self, parent, image_path):
