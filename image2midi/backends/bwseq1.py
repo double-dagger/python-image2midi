@@ -28,7 +28,7 @@ class Image(image2midi.backends.common.ClusterImage):
     cluster_class = Cluster
 
     def __init__(self, parent, image_path):
-        self.track = parent
+        self.player = parent
         self._im = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         self.init_image()
 

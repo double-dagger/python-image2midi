@@ -9,7 +9,7 @@ class NoteChannel(object):
     notes = None
 
     def __init__(self, parent, channel_number):
-        self.track = parent
+        self.player = parent
         self.channel_number = channel_number
         self.notes = []
 
@@ -18,7 +18,7 @@ class NoteChannel(object):
         if note is None:
             return
         self.notes.append(note)
-        self.track.outport.send(
+        self.player.outport.send(
             mido.Message('note_on', note=note, channel=self.channel_number)
         )
 
@@ -27,7 +27,7 @@ class NoteChannel(object):
         if note is None or note not in self.notes:
             return
         self.notes.remove(note)
-        self.track.outport.send(
+        self.player.outport.send(
             mido.Message('note_off', note=note, channel=self.channel_number)
         )
 

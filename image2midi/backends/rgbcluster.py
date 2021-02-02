@@ -30,6 +30,6 @@ class Image(image2midi.backends.common.ClusterImage):
     bpm_multiplier = 8
     cluster_class = Cluster
     def __init__(self, parent, image_path):
-        self.track = parent
+        self.player = parent
         self._im = cv2.imread(image_path, cv2.IMREAD_COLOR)
         self.init_image()

@@ -3,7 +3,7 @@ import optparse
 import logging
 logger = logging.getLogger('')
 
-import image2midi.track
+import image2midi.player
 
 import twisted.internet.reactor
 
@@ -54,8 +54,8 @@ if __name__ == '__main__':
 
     (options, args) = p.parse_args()
 
-    # Initialize Track object
-    track = image2midi.track.Track(
+    # Initialize Player object
+    player = image2midi.player.Player(
         port_name=options.port_name,
         bpm=options.bpm,
         control_channel=options.control_channel,
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     )
 
     # Create loop and run
-    track.internal_clock()
+    player.internal_clock()
 
     # Start reactor
     twisted.internet.reactor.run()

@@ -20,11 +20,11 @@ class Cluster(object):
         self.image = parent
 
     def play(self):
-        channel = self.image.track.channels[9]
+        channel = self.image.player.channels[9]
         note = 36
         channel.add_note(note)
         twisted.internet.reactor.callLater(
-            self.image.track.step_length / 2,
+            self.image.player.step_length / 2,
             channel.stop_note,
             note
         )
@@ -38,10 +38,10 @@ class Cluster(object):
     def play_note(self, note, channel):
         if note is not None:
             logger.debug('{0}: {1}'.format(channel, note))
-        channel = self.image.track.channels[channel]
+        channel = self.image.player.channels[channel]
         if ( not channel.check_note(note) ) and note is not None:
             twisted.internet.reactor.callLater(
-                self.image.track.step_length / 2,
+                self.image.player.step_length / 2,
                 channel.play_note,
                 note
             )
@@ -58,7 +58,7 @@ class Image(object):
     __going_back = False
 
     def __init__(self, parent, image_path):
-        self.track = parent
+        self.player = parent
         self._im = cv2.imread(image_path, cv2.IMREAD_COLOR)
         self.init_image()
 
@@ -252,7 +252,7 @@ class SequenceCluster(Cluster):
         super().__init__(parent)
         self.steps = len(self.sequence_candidates[0])
         ## self.value_divider = int(255 / len(self.sequence_candidates)) + 1
-        self.step_length = self.image.track.step_length / self.steps
+        self.step_length = self.image.player.step_length / self.steps
 
     def play(self):
         """
@@ -295,7 +295,7 @@ class SequenceCluster(Cluster):
     def play_step(self, i, channel):
         """
         """
-        ch = self.image.track.channels[channel]
+        ch = self.image.player.channels[channel]
         note = self.sequences[channel][i]
         if note is not None:
             ch.add_note(note)

@@ -7,7 +7,7 @@ import os
 import os.path
 import pkgutil
 import importlib
-logger = logging.getLogger('track')
+logger = logging.getLogger('player')
 
 import twisted.internet.reactor
 import mido
@@ -15,7 +15,7 @@ import mido
 import image2midi.note
 import image2midi.backends
 
-class Track(object):
+class Player(object):
     bpm = None
     image = None
     last_time = None
