@@ -14,7 +14,7 @@ if __name__ == '__main__':
     )
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.addHandler(handler)
 
     # Parse command line options

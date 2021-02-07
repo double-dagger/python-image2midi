@@ -12,8 +12,9 @@ logger = logging.getLogger('player')
 import twisted.internet.reactor
 import mido
 
+import image2midi.track
+import image2midi.image
 import image2midi.note
-import image2midi.backends
 
 class Player(object):
     bpm = None
@@ -27,31 +28,31 @@ class Player(object):
     switch_dirs_mode = False
     exit_mode = False
     exit_counter = 0
+    tracks = []
 
     def __init__(self, image_dir, port_name, bpm, config_file, control_channel=None):
+        # Setup midi and configuration from command line arguments.
         self.control_channel = control_channel
         self.config_file = config_file
-
         self.outport = mido.open_output(port_name)
         self.inport = mido.open_input(port_name, callback=self.midi_callback)
 
+        # Setup BPM from command line argument. Settings might override.
         self.set_bpm(bpm)
 
-        # Init outport channel wrappers
-        for i in range(0,10):
-            if i == 9:
-                self.channels.append(image2midi.note.NoteChannel(self, i))
-            else:
-                self.channels.append(image2midi.note.MonophonicNoteChannel(self, i))
+        # Find all images in image_dir and initalize Image object.
+        self.load_image_paths(image_dir)
+        self.image = image2midi.image.Image(self, self.image_paths[0])
 
-        # Find all images in image_dir
-        self.find_image_paths(image_dir)
+        # Load configuration and try to find image_path if specified.
+        self.load_config()
+        self.find_image_path(self.config.get('image_path'))
 
-        # Import available backends
-        self.import_backends()
+        # Init configured tracks
+        self.init_tracks()
 
-        # Init image
-        self.init_image()
+        # Simulate switch_image to load proper image.
+        self.switch_image(0)
 
         # Add cleanup function before shutdown
         # to stop all playing notes when program is stopped.
@@ -62,6 +63,22 @@ class Player(object):
         twisted.internet.reactor.addSystemEventTrigger(
             'after', 'shutdown', self.shutdown_with_exitcode
         )
+
+    def load_config(self):
+        try:
+            with open(self.config_file, 'r') as f:
+                self.config = json.load(f) or {}
+        except FileNotFoundError:
+            logger.warning('Can not open file `{0}`'.format(self.config_file))
+
+    def init_tracks(self):
+        if not self.config.get('tracks'):
+            logger.warning('Loaded config with no tracks specified.')
+            return
+        for track in self.config.get('tracks'):
+            self.tracks.append(image2midi.track.Track(
+                self, **track
+            ))
 
     def shutdown_with_exitcode(self):
         os._exit(self.exit_counter)
@@ -80,44 +97,27 @@ class Player(object):
             self.index_image = ( self.index_image + d_index ) % len(self.image_paths)
         self.reload_image()
 
-    def switch_backend(self, d_index):
-        self.index_backend = ( self.index_backend + d_index ) % len(self.backends)
-        self.reload_image()
-
     def reload_image(self):
-        self.init_image()
-        self.restart()
+        self.image.load_image(self.image_paths[self.index_image])
+        self.image.show_image()
 
-    def find_image_paths(self, image_dir):
+    def find_image_path(self, image_path):
+        """ Try to find index of image specified by image_path.
+            If not found, fallback to 0
+        """
+        try:
+            self.index_image = self.image_paths.index(image_path)
+        except ValueError:
+            self.index_image = 0
+
+    def load_image_paths(self, image_dir):
         self.image_paths = []
         for (dirpath, dirnames, filenames) in os.walk(image_dir):
-            dirnames.sort()
+            dirnames.sort(key=lambda d: os.stat(os.path.join(dirpath, d)).st_mtime, reverse=True)
             filenames.sort()
             for filename in filenames:
                 if os.path.splitext(filename)[1].lower() in ('.jpg', '.jpeg', '.png'):
                     self.image_paths.append(os.path.join(dirpath, filename))
-
-    def import_backends(self):
-        self.backends = []
-        for _, modname, _ in pkgutil.walk_packages(
-            image2midi.backends.__path__,
-            image2midi.backends.__name__ + '.'
-        ):
-            if modname == 'image2midi.backends.common':
-                # Skip common
-                continue
-            self.backends.append(
-                importlib.import_module(modname)
-            )
-
-    def init_image(self):
-        if self.image is not None:
-            del self.image
-        self.image = self.backends[self.index_backend].Image(self, self.image_paths[self.index_image])
-        self.image.show_image()
-        self.set_bpm(self.bpm)
-        self.stop_all_notes()
-        self.load_cc()
 
     def stop_all_notes(self):
         for channel in self.channels:
@@ -130,15 +130,11 @@ class Player(object):
     def set_bpm(self, bpm):
         prev_bpm = self.bpm
         self.bpm = bpm
-        # 8-tackt(?! WTF)
-        ## self.bpm *= 8
         # Initialize step length from BPM
         if self.bpm == 0:
             self.bpm_step_length = 0
         else:
             self.bpm_step_length = 60 / self.bpm
-        if self.image and hasattr(self.image, 'bpm_multiplier') and self.image.bpm_multiplier:
-            self.bpm_step_length /= self.image.bpm_multiplier
         if prev_bpm == 0 and self.bpm != 0:
             # Restart clock if bpm raised from zero.
             self.on_clock()
@@ -216,20 +212,21 @@ class Player(object):
             json.dump(cc_json, f)
 
     def load_cc(self):
-        try:
-            with open(self.config_file, 'r') as f:
-                cc_json = json.load(f) or {}
-        except:
-            cc_json = {}
-        for cc_item in cc_json.items():
-            cc = mido.Message(
-                'control_change',
-                channel = self.control_channel,
-                control = int(cc_item[0]),
-                value = cc_item[1],
-            )
-            logger.debug('Loaded CC: {0}'.format(cc))
-            self.midi_callback(cc)
+        pass
+##         try:
+##             with open(self.config_file, 'r') as f:
+##                 cc_json = json.load(f) or {}
+##         except:
+##             cc_json = {}
+##         for cc_item in cc_json.items():
+##             cc = mido.Message(
+##                 'control_change',
+##                 channel = self.control_channel,
+##                 control = int(cc_item[0]),
+##                 value = cc_item[1],
+##             )
+##             logger.debug('Loaded CC: {0}'.format(cc))
+##             self.midi_callback(cc)
 
     def restart(self):
         self.image.restart()
@@ -239,7 +236,9 @@ class Player(object):
             self.step_length = time.time()-self.last_time
         self.last_time = time.time()
 
-        self.image.next_cluster()
+        for track in self.tracks:
+            track.step()
+        self.image.show_image()
 
     def internal_clock(self):
         twisted.internet.reactor.callLater(self.bpm_step_length, self.internal_clock)
