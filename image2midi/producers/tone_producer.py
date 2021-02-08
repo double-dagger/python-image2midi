@@ -12,8 +12,7 @@ class Producer(image2midi.producers.Producer):
 
     quant_note = 3
 
-    config_vars = image2midi.producers.Producer.config_vars
-    config_vars.extend(['min_note', 'max_note', 'quant_note'])
+    config_vars = image2midi.producers.Producer.config_vars + ['min_note', 'max_note', 'quant_note', 'does_not_exist']
 
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)

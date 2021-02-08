@@ -22,8 +22,7 @@ class Producer(image2midi.producers.Producer):
     ## steps_per_beat = 8
     note = 36
 
-    config_vars = image2midi.producers.Producer.config_vars
-    config_vars.extend(['pattern_length', 'note'])
+    config_vars = image2midi.producers.Producer.config_vars + ['pattern_length', 'note']
 
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)
@@ -36,7 +35,7 @@ class Producer(image2midi.producers.Producer):
         # Generate Euclidian pattern, flatten and set note
         pattern = EuclidianPattern(k, self.pattern_length)
         pattern = numpy.array(pattern).flatten()
-        image2midi.producers.logger.info('Pattern: {0}'.format(pattern))
+        image2midi.producers.logger.info('Pattern: {0} {1}'.format(self.note, pattern))
         return pattern
 
     def play(self):

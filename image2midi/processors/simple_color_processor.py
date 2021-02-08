@@ -10,8 +10,7 @@ class Processor(image2midi.processors.ImageProcessor):
     # Color channel to get value from (0 - blue, 1 - green, 2 - red)
     color_channel = 0
 
-    config_vars = image2midi.processors.ImageProcessor.config_vars
-    config_vars.extend(['color_channel'])
+    config_vars = image2midi.processors.ImageProcessor.config_vars + ['color_channel',]
 
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)

@@ -93,8 +93,7 @@ class ReturningCursor(Cursor):
     # Flag to stop in currently running row/column
     hold_axis = False
 
-    config_vars = Cursor.config_vars
-    config_vars.extend(['hold_axis'])
+    config_vars = Cursor.config_vars + ['hold_axis',]
 
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)
