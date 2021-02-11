@@ -28,6 +28,12 @@ class Producer(image2midi.producers.Producer):
         super().__init__(parent, **kwargs)
         self.configure(kwargs)
 
+    def param1(self, d_value):
+        self.pattern_length = ( self.pattern_length + d_value ) % 64
+
+    def param4(self, d_value):
+        self.note = ( self.note + d_value ) % 128
+
     def get_pattern(self):
         # Compute how many active steps from producer value
         k = int(self.value * self.pattern_length)

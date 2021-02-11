@@ -47,6 +47,23 @@ class Track(object):
         else:
             self.producer = list(self.producers.values())[0].Producer(self, **producer_config)
 
+    def switch_processor(self, d_index):
+        index = ( list(self.processors.keys()).index(self.processor.__module__) + d_index ) % len(self.processors)
+        act_config = self.processor.config2dict()
+        act_config.update({'cursor': self.processor.cursor})
+        self.processor = self.processors.get(list(self.processors.keys())[index]).Processor(
+            self,
+            **act_config
+        )
+
+    def switch_producer(self, d_index):
+        index = ( list(self.producers.keys()).index(self.producer.__module__) + d_index ) % len(self.producers)
+        act_config = self.producer.config2dict()
+        self.producer = self.producers.get(list(self.producers.keys())[index]).Producer(
+            self,
+            **act_config
+        )
+
     def import_processors(self):
         """ Find available Processor providing modules.
         """
@@ -76,5 +93,4 @@ class Track(object):
             self.processor.get_value()
         )
         self.producer.play()
-        self.processor.draw_cursor()
         self.processor.step()

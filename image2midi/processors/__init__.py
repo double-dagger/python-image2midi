@@ -33,7 +33,22 @@ class ImageProcessor(Processor):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.image = self.track.player.image
-        self.cursor = ReturningCursor(self, **kwargs)
+        if 'cursor' in kwargs.keys():
+            self.cursor = kwargs.get('cursor')
+        else:
+            self.cursor = ReturningCursor(self, **kwargs)
+
+    def param1(self, d_value):
+        logger.debug('{0.__class__} param1 {1}'.format(self, d_value))
+
+    def param2(self, d_value):
+        logger.debug('{0.__class__} param1 {1}'.format(self, d_value))
+
+    def param3(self, d_value):
+        logger.debug('{0.__class__} param1 {1}'.format(self, d_value))
+
+    def param4(self, d_value):
+        logger.debug('{0.__class__} param1 {1}'.format(self, d_value))
 
     def step(self):
         self.cursor.step()
@@ -67,6 +82,35 @@ class Cursor(image2midi.config.Configurable):
     def __init__(self, parent, **kwargs):
         self.processor = parent
         self.configure(kwargs)
+
+    def share_cursor(self):
+        self.processor.track.player.share_cursor(self.size, self.step_size)
+
+    def update_size(self, axis, diff):
+        self.size[axis] = min(
+            max(1, self.size[axis] + diff),
+            self.processor.image.shape()[axis] - self.step_size[axis]
+        )
+        self.share_cursor()
+
+    def update_size_x(self, diff):
+        self.update_size(0, diff)
+
+    def update_size_y(self, diff):
+        self.update_size(1, diff)
+
+    def update_step(self, axis, diff):
+        self.step_size[axis] = min(
+            max(1, self.step_size[axis] + diff),
+            self.processor.image.shape()[axis] - self.size[axis]
+        )
+        self.share_cursor()
+
+    def update_step_x(self, diff):
+        self.update_step(0, diff)
+
+    def update_step_y(self, diff):
+        self.update_step(1, diff)
 
     def step(self, vector=(1, 0)):
         """ Move cursor within the processor.image.

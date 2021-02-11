@@ -16,12 +16,15 @@ class Processor(image2midi.processors.ImageProcessor):
         super().__init__(parent, **kwargs)
         self.configure(kwargs)
 
+    def param4(self, d_value):
+        self.color_channel = ( self.color_channel + d_value ) % 3
+
     def draw_cursor(self):
         """ Draw cursor in color based on which channel it represents.
         """
         color = [0, 0, 0]
         color[self.color_channel] = 255
-        self.track.player.image.draw_rect(self.cursor.position, self.cursor.size, color=tuple(color), thickness=1)
+        self.track.player.image.draw_rect(self.cursor.position, self.cursor.size, color=tuple(color), thickness=2)
 
     def get_value(self):
         subimage = self.image.get_subimage(self.cursor.position, self.cursor.size)[:,:,self.color_channel]

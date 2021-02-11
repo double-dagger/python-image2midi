@@ -23,6 +23,9 @@ class Image(object):
         self.player = parent
         self.load_image(image_path)
 
+    def reset_display(self):
+        self._im_display = self._im_original
+
     def load_image(self, image_path):
         self._im_original = cv2.imread(image_path, cv2.IMREAD_COLOR)
         self._im_original = cv2.resize(
