@@ -12,8 +12,9 @@ logger = logging.getLogger('player')
 import twisted.internet.reactor
 import mido
 
+import image2midi.track
+import image2midi.image
 import image2midi.note
-import image2midi.backends
 
 class Player(object):
     bpm = None
@@ -27,31 +28,44 @@ class Player(object):
     switch_dirs_mode = False
     exit_mode = False
     exit_counter = 0
+    tracks = []
+    active_track = 0
+    alt = False
+    shared_cursor = True
+    show_cursor = True
+    show_working_image = False
+    show_info = True
 
     def __init__(self, image_dir, port_name, bpm, config_file, control_channel=None):
+        # Setup midi and configuration from command line arguments.
         self.control_channel = control_channel
         self.config_file = config_file
-
         self.outport = mido.open_output(port_name)
         self.inport = mido.open_input(port_name, callback=self.midi_callback)
 
+        # Setup BPM from command line argument. Settings might override.
         self.set_bpm(bpm)
 
-        # Init outport channel wrappers
-        for i in range(0,10):
-            if i == 9:
-                self.channels.append(image2midi.note.NoteChannel(self, i))
-            else:
-                self.channels.append(image2midi.note.MonophonicNoteChannel(self, i))
+        # Find all images in image_dir and initalize Image object.
+        self.load_image_paths(image_dir)
+        self.image = image2midi.image.Image(self, self.image_paths[0])
 
-        # Find all images in image_dir
-        self.find_image_paths(image_dir)
+        # Load configuration and try to find image_path if specified.
+        self.load_config()
+        self.find_image_path(self.config.get('image_path'))
 
-        # Import available backends
-        self.import_backends()
+        # Init configured tracks
+        self.init_tracks()
+        self.active_track = self.config.get('active_track', 0) % len(self.tracks)
 
-        # Init image
-        self.init_image()
+        # Manual configuration
+        self.shared_cursor = self.config.get('shared_cursor', self.shared_cursor)
+        self.show_cursor = self.config.get('show_cursor', self.show_cursor)
+        self.show_working_image = self.config.get('show_working_image', self.show_working_image)
+        self.show_info = self.config.get('show_info', self.show_info)
+
+        # Simulate switch_image to load proper image.
+        self.switch_image(0)
 
         # Add cleanup function before shutdown
         # to stop all playing notes when program is stopped.
@@ -63,11 +77,27 @@ class Player(object):
             'after', 'shutdown', self.shutdown_with_exitcode
         )
 
+    def load_config(self):
+        try:
+            with open(self.config_file, 'r') as f:
+                self.config = json.load(f) or {}
+        except FileNotFoundError:
+            logger.warning('Can not open file `{0}`'.format(self.config_file))
+
+    def init_tracks(self):
+        if not self.config.get('tracks'):
+            logger.warning('Loaded config with no tracks specified.')
+            return
+        for track in self.config.get('tracks'):
+            self.tracks.append(image2midi.track.Track(
+                self, **track
+            ))
+
     def shutdown_with_exitcode(self):
         os._exit(self.exit_counter)
 
-    def switch_image(self, d_index, switch_dirs=False):
-        if switch_dirs:
+    def switch_image(self, d_index):
+        if self.alt:
             # In switch dirs mode find the first image in different dir
             # in given direction.
             # When going backwards, it results in the last image of dir
@@ -80,44 +110,44 @@ class Player(object):
             self.index_image = ( self.index_image + d_index ) % len(self.image_paths)
         self.reload_image()
 
-    def switch_backend(self, d_index):
-        self.index_backend = ( self.index_backend + d_index ) % len(self.backends)
-        self.reload_image()
-
     def reload_image(self):
-        self.init_image()
-        self.restart()
+        self.image.load_image(self.image_paths[self.index_image])
+        self.image.show_image()
 
-    def find_image_paths(self, image_dir):
+    def find_image_path(self, image_path):
+        """ Try to find index of image specified by image_path.
+            If not found, fallback to 0
+        """
+        try:
+            self.index_image = self.image_paths.index(image_path)
+        except ValueError:
+            self.index_image = 0
+
+    def load_image_paths(self, image_dir):
         self.image_paths = []
         for (dirpath, dirnames, filenames) in os.walk(image_dir):
-            dirnames.sort()
+            dirnames.sort(key=lambda d: os.stat(os.path.join(dirpath, d)).st_mtime, reverse=True)
             filenames.sort()
             for filename in filenames:
                 if os.path.splitext(filename)[1].lower() in ('.jpg', '.jpeg', '.png'):
                     self.image_paths.append(os.path.join(dirpath, filename))
 
-    def import_backends(self):
-        self.backends = []
-        for _, modname, _ in pkgutil.walk_packages(
-            image2midi.backends.__path__,
-            image2midi.backends.__name__ + '.'
-        ):
-            if modname == 'image2midi.backends.common':
-                # Skip common
-                continue
-            self.backends.append(
-                importlib.import_module(modname)
-            )
+    def track(self):
+        """ Reference to active track
+        """
+        return self.tracks[self.active_track]
 
-    def init_image(self):
-        if self.image is not None:
-            del self.image
-        self.image = self.backends[self.index_backend].Image(self, self.image_paths[self.index_image])
-        self.image.show_image()
-        self.set_bpm(self.bpm)
-        self.stop_all_notes()
-        self.load_cc()
+    def switch_track(self, d_index):
+        self.active_track = min(max(0, self.active_track + d_index), len(self.tracks) - 1)
+
+    def share_cursor(self, size, step_size):
+        if self.shared_cursor:
+            for track in self.tracks:
+                if track != self.track():
+                    track.processor.cursor.configure({
+                        'size': size.copy(),
+                        'step_size': step_size.copy(),
+                    })
 
     def stop_all_notes(self):
         for channel in self.channels:
@@ -130,15 +160,11 @@ class Player(object):
     def set_bpm(self, bpm):
         prev_bpm = self.bpm
         self.bpm = bpm
-        # 8-tackt(?! WTF)
-        ## self.bpm *= 8
         # Initialize step length from BPM
         if self.bpm == 0:
             self.bpm_step_length = 0
         else:
             self.bpm_step_length = 60 / self.bpm
-        if self.image and hasattr(self.image, 'bpm_multiplier') and self.image.bpm_multiplier:
-            self.bpm_step_length /= self.image.bpm_multiplier
         if prev_bpm == 0 and self.bpm != 0:
             # Restart clock if bpm raised from zero.
             self.on_clock()
@@ -181,65 +207,83 @@ class Player(object):
             return cc.value - 128
         return cc.value
 
+    def self_eval(self, command):
+        try:
+            exec(command)
+        except Exception as e:
+            logger.error('CC eval failed: `{0}`: {1}'.format(command, e))
+
     def midi_cc(self, cc):
-        if cc.control == 21:
-            if cc.value > 0:
-                value = self.relative_cc_convert(cc)
-                twisted.internet.reactor.callLater(0.01, self.switch_image, value, self.switch_dirs_mode)
-            return
-        if cc.control == 22:
-            if cc.value > 0:
-                value = self.relative_cc_convert(cc)
-                twisted.internet.reactor.callLater(0.01, self.switch_backend, value)
-            return
+        if str(cc.control) in self.config.get('midi_control').keys():
+            cc_config = self.config.get('midi_control').get(str(cc.control))
 
-        self.save_cc(cc)
+            if cc_config.get('type') == 'absolute_value':
+                cc_value = cc.value
+            elif cc_config.get('type') == 'relative_value':
+                if cc.value == 0:
+                    # Relative value == 0 is void action.
+                    return
+                cc_value = self.relative_cc_convert(cc)
+            elif cc_config.get('type') == 'boolean_value':
+                cc_value = cc.value != 0
+            else:
+                logger.warning('Unknown CC({0.control}) configuration `type` = `{1}`'.format(cc, cc_config.get('type')))
+                return
 
-        if cc.control == 20:
-            self.set_bpm(cc.value)
-        if cc.control == 85 and cc.value == 0:
-            self.restart()
+            if cc_config.get('operation') == 'call':
+                dest = cc_config.get('dest')
+                if self.alt and 'alt_dest' in cc_config.keys():
+                    dest = cc_config.get('alt_dest')
+                command = '{0}({1})'.format(dest, cc_value)
+            elif cc_config.get('operation') == 'assign':
+                command = '{0} = {1}'.format(cc_config.get('dest'), cc_value)
+            elif cc_config.get('operation') == 'alt':
+                self.alt = cc_value != 0
+                return
+            elif cc_config.get('operation') == 'stop':
+                self.stopped = cc_value != 0
+                return
+            elif cc_config.get('operation') == 'restart':
+                if cc_value == 0:
+                    self.restart()
+                return
+            else:
+                logger.warning('Unknown CC({0.control}) configuration `operation` = `{1}`'.format(cc, cc_config.get('operation')))
+                return
 
-        self.image.midi_cc(cc)
-
-        if cc.control == 117:
-            self.stopped = cc.value == 127
-
-    def save_cc(self, cc):
-        try:
-            with open(self.config_file, 'r') as f:
-                cc_json = json.load(f) or {}
-        except:
-            cc_json = {}
-        cc_json[cc.control] = cc.value
-        with open(self.config_file, 'w') as f:
-            json.dump(cc_json, f)
-
-    def load_cc(self):
-        try:
-            with open(self.config_file, 'r') as f:
-                cc_json = json.load(f) or {}
-        except:
-            cc_json = {}
-        for cc_item in cc_json.items():
-            cc = mido.Message(
-                'control_change',
-                channel = self.control_channel,
-                control = int(cc_item[0]),
-                value = cc_item[1],
-            )
-            logger.debug('Loaded CC: {0}'.format(cc))
-            self.midi_callback(cc)
+            logger.debug('CC: {0}'.format(command))
+            twisted.internet.reactor.callLater(0.01, self.self_eval, command)
 
     def restart(self):
-        self.image.restart()
+        """
+        """
+        for track in self.tracks:
+            track.processor.reset()
 
     def on_clock(self):
         if self.last_time is not None:
             self.step_length = time.time()-self.last_time
         self.last_time = time.time()
+        self.step()
 
-        self.image.next_cluster()
+    def step(self):
+        """ Perform step. Process step on all tracks, draw active cursor, show image.
+        """
+        self.image.reset_display()
+        for track in self.tracks:
+            track.step()
+        if self.show_working_image:
+            # TOOD
+            pass
+        if self.show_cursor:
+            self.track().processor.draw_cursor()
+        if self.show_info:
+            info = [
+                [' ( {0} )'.format(self.active_track), None, *self.track().processor.get_info()],
+                ['ch: {0}'.format(self.track().channel.channel_number), None, *self.track().producer.get_info()],
+            ]
+            self.image.set_info(info)
+        self.image.show_image()
 
     def internal_clock(self):
         twisted.internet.reactor.callLater(self.bpm_step_length, self.internal_clock)

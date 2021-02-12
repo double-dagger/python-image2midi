@@ -9,16 +9,16 @@ class NoteChannel(object):
     notes = None
 
     def __init__(self, parent, channel_number):
-        self.player = parent
+        self.track = parent
         self.channel_number = channel_number
         self.notes = []
 
     def add_note(self, note):
-        ## logger.debug('add_note #{0.channel_number} {0.notes} {1}'.format(self, note))
+        logger.debug('add_note #{0.channel_number} {0.notes} {1}'.format(self, note))
         if note is None:
             return
         self.notes.append(note)
-        self.player.outport.send(
+        self.track.player.outport.send(
             mido.Message('note_on', note=note, channel=self.channel_number)
         )
 
@@ -27,7 +27,7 @@ class NoteChannel(object):
         if note is None or note not in self.notes:
             return
         self.notes.remove(note)
-        self.player.outport.send(
+        self.track.player.outport.send(
             mido.Message('note_off', note=note, channel=self.channel_number)
         )
 
@@ -35,8 +35,6 @@ class NoteChannel(object):
         for playing_note in list(self.notes):
             self.stop_note(playing_note)
 
-
-class MonophonicNoteChannel(NoteChannel):
     def play_note(self, note):
         """ Play note
         """
