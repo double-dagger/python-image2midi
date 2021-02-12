@@ -40,6 +40,7 @@ class ImageProcessor(Processor):
             self.cursor = kwargs.get('cursor')
         else:
             self.cursor = ReturningCursor(self, **kwargs)
+        self.configure(kwargs)
 
     def param1(self, d_value):
         self.exponent = min(max(0.01, self.exponent + d_value * 0.01), 10.0)

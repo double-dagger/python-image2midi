@@ -12,10 +12,6 @@ class Processor(image2midi.processors.ImageProcessor):
 
     config_vars = image2midi.processors.ImageProcessor.config_vars + ['color_channel',]
 
-    def __init__(self, parent, **kwargs):
-        super().__init__(parent, **kwargs)
-        self.configure(kwargs)
-
     def param4(self, d_value):
         self.color_channel = ( self.color_channel + d_value ) % 3
 

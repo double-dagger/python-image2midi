@@ -7,6 +7,7 @@ import os
 import os.path
 import pkgutil
 import importlib
+import hashlib
 logger = logging.getLogger('player')
 
 import twisted.internet.reactor
@@ -83,6 +84,55 @@ class Player(object):
                 self.config = json.load(f) or {}
         except FileNotFoundError:
             logger.warning('Can not open file `{0}`'.format(self.config_file))
+
+    def image_hash(self):
+        try:
+            with open(self.image_paths[self.index_image], 'rb') as f:
+                md5 = hashlib.md5()
+                while True:
+                    data = f.read(65536)
+                    if not data:
+                        break
+                    md5.update(data)
+                return md5.hexdigest()
+        except FileNotFoundError:
+            logger.warning('Can not open file `{0}`'.format(self.config_file))
+
+    def image_config_file(self):
+        return os.path.join('.', '{0}.json'.format(self.image_hash()))
+
+    def save_image_config(self):
+        track_config = []
+        for track in self.tracks:
+            processor_config = track.processor.config2dict()
+            processor_config.update({'processor': track.processor.__module__})
+            processor_config.update(track.processor.cursor.config2dict())
+            producer_config = track.producer.config2dict()
+            producer_config.update({'producer': track.producer.__module__})
+            track_config.append({
+                'channel_number': track.channel.channel_number,
+                'processor_config': processor_config,
+                'producer_config': producer_config,
+            })
+        config_filename = self.image_config_file()
+        try:
+            with open(config_filename, 'w') as f:
+                json.dump(track_config, f, indent=2)
+                logger.info('Configuration for current image saved to: {0}'.format(config_filename))
+        except FileNotFoundError:
+            logger.warning('Can not write file `{0}`'.format(config_filename))
+
+    def load_image_config(self):
+        config_filename = self.image_config_file()
+        try:
+            with open(config_filename, 'r') as f:
+                config = json.load(f)
+                for i in range(len(config)):
+                    self.tracks[i].configure(config[i])
+                logger.info('Configuration loaded from: {0}'.format(config_filename))
+        except FileNotFoundError:
+            logger.warning('Can not open file `{0}`'.format(config_filename))
+
 
     def init_tracks(self):
         if not self.config.get('tracks'):
@@ -226,6 +276,11 @@ class Player(object):
                 cc_value = self.relative_cc_convert(cc)
             elif cc_config.get('type') == 'boolean_value':
                 cc_value = cc.value != 0
+            elif cc_config.get('type') == 'no_value':
+                cc_value = ''
+                if cc.value == 0:
+                    # Only on ``key down``
+                    return
             else:
                 logger.warning('Unknown CC({0.control}) configuration `type` = `{1}`'.format(cc, cc_config.get('type')))
                 return

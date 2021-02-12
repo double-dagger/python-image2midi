@@ -1,4 +1,6 @@
 
+import numpy
+
 
 class Configurable(object):
     """ Mixin class to set configuration of class attributes via
@@ -12,7 +14,10 @@ class Configurable(object):
 
     def __config_var_value(self, config_var):
         if hasattr(self, config_var):
-            return (config_var, getattr(self, config_var))
+            value = getattr(self, config_var)
+            if type(value) == numpy.ndarray:
+                value = value.tolist()
+            return (config_var, value)
 
     def config2dict(self):
         return dict(

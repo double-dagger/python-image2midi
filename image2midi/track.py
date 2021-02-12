@@ -38,14 +38,30 @@ class Track(object):
 
         # Setup processor / producer from specified values, fallback to
         # first available value as default
+        self.init_processor(processor_config)
+        self.init_producer(producer_config)
+
+    def init_processor(self, processor_config):
         if processor_config.get('processor') in self.processors.keys():
             self.processor = self.processors.get(processor_config.get('processor')).Processor(self, **processor_config)
         else:
             self.processor = list(self.processors.values())[0].Processor(self, **processor_config)
+
+    def init_producer(self, producer_config):
         if producer_config.get('producer') in self.producers.keys():
             self.producer = self.producers.get(producer_config.get('producer')).Producer(self, **producer_config)
         else:
             self.producer = list(self.producers.values())[0].Producer(self, **producer_config)
+
+    def configure(self, kwargs):
+        """ Custom (re)configuration method
+        """
+        if 'channel_number' in kwargs.keys():
+            self.channel.channel_number = kwargs.get('channel_number')
+        if 'processor_config' in kwargs.keys():
+            self.init_processor(kwargs.get('processor_config'))
+        if 'producer_config' in kwargs.keys():
+            self.init_producer(kwargs.get('producer_config'))
 
     def switch_processor(self, d_index):
         index = ( list(self.processors.keys()).index(self.processor.__module__) + d_index ) % len(self.processors)
