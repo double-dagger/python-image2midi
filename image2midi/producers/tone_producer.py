@@ -24,7 +24,7 @@ class Producer(image2midi.producers.Producer):
         self.min_note = max(0, min(self.max_note, ( self.min_note + d_value )))
 
     def param2(self, d_value):
-        self.max_note = min(72, max(self.min_note, ( self.max_note + d_value )))
+        self.max_note = min(127, max(self.min_note, ( self.max_note + d_value )))
 
     def param3(self, d_value):
         self.quant_note = min(max(1, self.quant_note + d_value ), 24)
