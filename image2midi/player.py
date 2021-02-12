@@ -324,12 +324,14 @@ class Player(object):
     def step(self):
         """ Perform step. Process step on all tracks, draw active cursor, show image.
         """
-        self.image.reset_display()
+        image = self.image
+        if self.show_working_image and hasattr(self.track().processor, 'processed_image'):
+            image = self.track().processor.processed_image
+
+        if image:
+            image.reset_display()
         for track in self.tracks:
             track.step()
-        if self.show_working_image:
-            # TOOD
-            pass
         if self.show_cursor:
             self.track().processor.draw_cursor()
         if self.show_info:
@@ -337,8 +339,8 @@ class Player(object):
                 [' ( {0} )'.format(self.active_track), None, *self.track().processor.get_info()],
                 ['ch: {0}'.format(self.track().channel.channel_number), None, *self.track().producer.get_info()],
             ]
-            self.image.set_info(info)
-        self.image.show_image()
+            image.set_info(info)
+        image.show_image()
 
     def internal_clock(self):
         twisted.internet.reactor.callLater(self.bpm_step_length, self.internal_clock)

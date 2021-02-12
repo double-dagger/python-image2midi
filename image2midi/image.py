@@ -46,6 +46,13 @@ class Image(object):
     def shape(self):
         return self._im_original.shape[:2][::-1]
 
+    def draw_sub_image(self, position, size, subimage):
+        self._im_display = self._im_display.copy()
+        self._im_display[
+            position[1]:position[1]+size[1],
+            position[0]:position[0]+size[0]
+        ] = subimage
+
     def draw_rect(self, position, size, color=(0, 0, 255), thickness=-1):
         self._im_display = cv2.rectangle(
             self._im_original.copy(),
