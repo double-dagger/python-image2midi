@@ -89,8 +89,8 @@ class Track(object):
     def step(self):
         """ Perform track step. Will be called every BPM cycle from player.
         """
+        self.processor.step()
         self.producer.set_value(
             self.processor.get_value()
         )
         self.producer.play()
-        self.processor.step()

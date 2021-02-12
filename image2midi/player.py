@@ -34,6 +34,7 @@ class Player(object):
     shared_cursor = True
     show_cursor = True
     show_working_image = False
+    show_info = True
 
     def __init__(self, image_dir, port_name, bpm, config_file, control_channel=None):
         # Setup midi and configuration from command line arguments.
@@ -61,6 +62,7 @@ class Player(object):
         self.shared_cursor = self.config.get('shared_cursor', self.shared_cursor)
         self.show_cursor = self.config.get('show_cursor', self.show_cursor)
         self.show_working_image = self.config.get('show_working_image', self.show_working_image)
+        self.show_info = self.config.get('show_info', self.show_info)
 
         # Simulate switch_image to load proper image.
         self.switch_image(0)
@@ -136,7 +138,7 @@ class Player(object):
         return self.tracks[self.active_track]
 
     def switch_track(self, d_index):
-        self.active_track = ( self.active_track + d_index ) % len(self.tracks)
+        self.active_track = min(max(0, self.active_track + d_index), len(self.tracks) - 1)
 
     def share_cursor(self, size, step_size):
         if self.shared_cursor:
@@ -255,6 +257,8 @@ class Player(object):
     def restart(self):
         """
         """
+        for track in self.tracks:
+            track.processor.reset()
 
     def on_clock(self):
         if self.last_time is not None:
@@ -273,6 +277,12 @@ class Player(object):
             pass
         if self.show_cursor:
             self.track().processor.draw_cursor()
+        if self.show_info:
+            info = [
+                [' ( {0} )'.format(self.active_track), None, *self.track().processor.get_info()],
+                ['ch: {0}'.format(self.track().channel.channel_number), None, *self.track().producer.get_info()],
+            ]
+            self.image.set_info(info)
         self.image.show_image()
 
     def internal_clock(self):

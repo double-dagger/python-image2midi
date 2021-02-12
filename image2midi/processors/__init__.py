@@ -30,6 +30,9 @@ class ImageProcessor(Processor):
     # Custom processor image. Derived from and defaults to track.player.image
     image = None
 
+    exponent = 1.0
+    config_vars = Processor.config_vars + ['exponent',]
+
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.image = self.track.player.image
@@ -39,7 +42,7 @@ class ImageProcessor(Processor):
             self.cursor = ReturningCursor(self, **kwargs)
 
     def param1(self, d_value):
-        logger.debug('{0.__class__} param1 {1}'.format(self, d_value))
+        self.exponent = min(max(0.01, self.exponent + d_value * 0.01), 10.0)
 
     def param2(self, d_value):
         logger.debug('{0.__class__} param1 {1}'.format(self, d_value))
@@ -49,6 +52,9 @@ class ImageProcessor(Processor):
 
     def param4(self, d_value):
         logger.debug('{0.__class__} param1 {1}'.format(self, d_value))
+
+    def get_info(self):
+        return ['e: {0:.2f}'.format(self.exponent)]
 
     def step(self):
         self.cursor.step()
@@ -63,6 +69,9 @@ class ImageProcessor(Processor):
             Returning value should be normalized to 0..1
         """
         raise NotImplementedError
+
+    def reset(self):
+        self.cursor.position = [0, 0]
 
 
 class Cursor(image2midi.config.Configurable):

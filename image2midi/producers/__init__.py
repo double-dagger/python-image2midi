@@ -27,6 +27,9 @@ class Producer(image2midi.config.Configurable):
     def param4(self, d_value):
         logger.debug('{0.__class__} param4 {1}'.format(self, d_value))
 
+    def get_info(self):
+        return []
+
     def set_value(self, value):
         self.value = value
 

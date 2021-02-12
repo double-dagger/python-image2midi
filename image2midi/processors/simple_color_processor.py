@@ -19,6 +19,9 @@ class Processor(image2midi.processors.ImageProcessor):
     def param4(self, d_value):
         self.color_channel = ( self.color_channel + d_value ) % 3
 
+    def get_info(self):
+        return ['sColor',] + super().get_info() + [None, '{0:.4f}'.format(self._value),]
+
     def draw_cursor(self):
         """ Draw cursor in color based on which channel it represents.
         """
@@ -28,6 +31,6 @@ class Processor(image2midi.processors.ImageProcessor):
 
     def get_value(self):
         subimage = self.image.get_subimage(self.cursor.position, self.cursor.size)[:,:,self.color_channel]
-        value = numpy.average(subimage) / 255
-        image2midi.processors.logger.debug('get_color: {0:.4f}'.format(value))
-        return value
+        self._value = ( numpy.average(subimage) / 255 ) ** self.exponent
+        image2midi.processors.logger.debug('get_color: {0:.4f}'.format(self._value))
+        return self._value

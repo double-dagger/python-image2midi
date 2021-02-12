@@ -29,28 +29,30 @@ class Producer(image2midi.producers.Producer):
         self.configure(kwargs)
 
     def param1(self, d_value):
-        self.pattern_length = ( self.pattern_length + d_value ) % 64
+        self.pattern_length = min(max(1, ( self.pattern_length + d_value )), 64)
 
     def param4(self, d_value):
         self.note = ( self.note + d_value ) % 128
 
-    def get_pattern(self):
+    def get_info(self):
+        return ('Euclid', 'len: {0}'.format(self.pattern_length), 'n.: {0}'.format(self.note), self._pattern)
+
+    def gen_pattern(self):
         # Compute how many active steps from producer value
-        k = int(self.value * self.pattern_length)
+        self._k = int(self.value * self.pattern_length)
 
         # Generate Euclidian pattern, flatten and set note
-        pattern = EuclidianPattern(k, self.pattern_length)
-        pattern = numpy.array(pattern).flatten()
-        image2midi.producers.logger.info('Pattern: {0} {1}'.format(self.note, pattern))
-        return pattern
+        self._pattern = EuclidianPattern(self._k, self.pattern_length)
+        self._pattern = numpy.array(self._pattern).flatten()
+        image2midi.producers.logger.info('Pattern: {0} {1}'.format(self.note, self._pattern))
 
     def play(self):
-        pattern = self.get_pattern()
+        self.gen_pattern()
 
         # Play pattern using twisted. Set callLater for every active step.
         step_length = self.track.player.step_length / self.pattern_length
         offset = 0.0
-        for step in pattern:
+        for step in self._pattern:
             if step == 1:
                 twisted.internet.reactor.callLater(
                     offset,

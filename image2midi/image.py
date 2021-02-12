@@ -2,6 +2,8 @@
 import copy
 import numpy
 import cv2
+import logging
+logger = logging.getLogger('image')
 
 
 SIZE_IMAGE = (900, 600)
@@ -19,12 +21,18 @@ class Image(object):
     _im_original_bw = None
     _im_display = None
 
+    _info = None
+
     def __init__(self, parent, image_path):
         self.player = parent
         self.load_image(image_path)
 
     def reset_display(self):
         self._im_display = self._im_original
+        self._info = None
+
+    def set_info(self, info):
+        self._info = info
 
     def load_image(self, image_path):
         self._im_original = cv2.imread(image_path, cv2.IMREAD_COLOR)
@@ -59,6 +67,31 @@ class Image(object):
     def get_subimage_bw(self, position, size):
         return self.__get_sub_image(self._im_original_bw, position, size)
 
+    def draw_info(self, im, start_point, info_list):
+        for info in info_list:
+            if type(info) in (str, int, float):
+                cv2.putText(im, str(info), tuple(start_point), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (191, 127, 255), 1, cv2.LINE_AA, False)
+            elif type(info) in (list, numpy.ndarray):
+                # Assume list to be pattern
+                for step in info:
+                    if step:
+                        color = (191, 127, 255)
+                    else:
+                        color = (31, 0, 63)
+                    cv2.rectangle(
+                        im,
+                        tuple(start_point),
+                        tuple(numpy.add(start_point, [42, 7])),
+                        color,
+                        -1,
+                    )
+                    start_point[1] += 10
+            elif info is None:
+                pass
+            else:
+                logger.warning('Unknown info {0}: {1}'.format(type(info), info))
+            start_point[1] += 25
+
     def show_image(self, wait_interval=1, fullscreen=False):
         im = cv2.copyMakeBorder(
             self._im_display,
@@ -69,6 +102,10 @@ class Image(object):
             borderType=cv2.BORDER_CONSTANT,
             value=0
         )
+
+        if self._info is not None:
+            self.draw_info(im, [5, 30], self._info[0])
+            self.draw_info(im, [970, 30], self._info[1])
 
         if fullscreen:
             cv2.namedWindow('Image', cv2.WND_PROP_FULLSCREEN)
