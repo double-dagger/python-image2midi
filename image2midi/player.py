@@ -162,6 +162,9 @@ class Player(object):
 
     def reload_image(self):
         self.image.load_image(self.image_paths[self.index_image])
+        for track in self.tracks:
+            if hasattr(track.processor, 'process_image'):
+                track.processor.process_image()
         self.image.show_image()
 
     def find_image_path(self, image_path):
