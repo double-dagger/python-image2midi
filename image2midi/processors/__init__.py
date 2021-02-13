@@ -31,7 +31,8 @@ class ImageProcessor(Processor):
     image = None
 
     exponent = 1.0
-    config_vars = Processor.config_vars + ['exponent',]
+    multiplier = 1.0
+    config_vars = Processor.config_vars + ['exponent', 'multiplier']
 
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
@@ -54,8 +55,11 @@ class ImageProcessor(Processor):
     def param4(self, d_value):
         logger.debug('{0.__class__} param1 {1}'.format(self, d_value))
 
+    def param5(self, d_value):
+        self.multiplier = min(max(0.01, self.multiplier + d_value * 0.01), 10.0)
+
     def get_info(self):
-        return ['e: {0:.2f}'.format(self.exponent), self.cursor.locked, self.cursor.hold_axis]
+        return ['e: {0:.2f}'.format(self.exponent), 'm: {0:.2f}'.format(self.multiplier), self.cursor.locked, self.cursor.hold_axis]
 
     def step(self):
         self.cursor.step()

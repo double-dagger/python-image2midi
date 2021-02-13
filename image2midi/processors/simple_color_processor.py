@@ -27,6 +27,6 @@ class Processor(image2midi.processors.ImageProcessor):
 
     def get_value(self):
         subimage = self.image.get_subimage(self.cursor.position, self.cursor.size)[:,:,self.color_channel]
-        self._value = ( numpy.average(subimage) / 255 ) ** self.exponent
+        self._value = min( 1.0, ( ( numpy.average(subimage) / 255 ) ** self.exponent ) * self.multiplier )
         image2midi.processors.logger.debug('get_color: {0:.4f}'.format(self._value))
         return self._value
