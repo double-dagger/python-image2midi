@@ -12,9 +12,7 @@ class Producer(image2midi.producers.euclidian_pattern.Producer):
     ## TODO steps_per_beat other than pattern length
     ## steps_per_beat = 8
     note = 36
-
-    def get_info(self):
-        return ('Palindr', 'len: {0}'.format(self.pattern_length), 'n.: {0}'.format(self.note), self._pattern)
+    _name = 'Palindr'
 
     def gen_pattern(self):
         # Compute how many active steps from producer value
