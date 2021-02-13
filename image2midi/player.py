@@ -310,7 +310,7 @@ class Player(object):
         """
         """
         for track in self.tracks:
-            track.processor.reset()
+            track.processor.cursor.restart()
 
     def on_clock(self):
         if self.last_time is not None:

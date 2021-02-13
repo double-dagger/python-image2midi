@@ -78,6 +78,9 @@ class Image(object):
         for info in info_list:
             if type(info) in (str, int, float):
                 cv2.putText(im, str(info), tuple(start_point), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (191, 127, 255), 1, cv2.LINE_AA, False)
+            elif type(info) == bool:
+                thickness = info and -1 or 1
+                cv2.circle(im, tuple(numpy.add(start_point, [25, -5])), 7, (191, 127, 255), thickness)
             elif type(info) in (list, numpy.ndarray):
                 # Assume list to be pattern
                 for step in info:

@@ -55,7 +55,7 @@ class ImageProcessor(Processor):
         logger.debug('{0.__class__} param1 {1}'.format(self, d_value))
 
     def get_info(self):
-        return ['e: {0:.2f}'.format(self.exponent)]
+        return ['e: {0:.2f}'.format(self.exponent), self.cursor.locked, self.cursor.hold_axis]
 
     def step(self):
         self.cursor.step()
@@ -71,9 +71,6 @@ class ImageProcessor(Processor):
         """
         raise NotImplementedError
 
-    def reset(self):
-        self.cursor.position = [0, 0]
-
 
 class Cursor(image2midi.config.Configurable):
     """
@@ -87,11 +84,22 @@ class Cursor(image2midi.config.Configurable):
     # Default cursor step size
     step_size = [30, 30]
 
-    config_vars = ['position', 'size', 'step_size']
+    # When cursor is locked it does not update from master cursor
+    # in shared cursor mode. And does not restart.
+    locked = False
+
+    config_vars = ['position', 'size', 'step_size', 'locked']
 
     def __init__(self, parent, **kwargs):
         self.processor = parent
         self.configure(kwargs)
+
+    def restart(self):
+        if not self.locked:
+            self.position = [0, 0]
+
+    def switch_locked(self):
+        self.locked = not self.locked
 
     def share_cursor(self):
         self.processor.track.player.share_cursor(self)
@@ -123,10 +131,10 @@ class Cursor(image2midi.config.Configurable):
         self.update_step(1, diff)
 
     def update_from_cursor(self, master_cursor):
-        print(master_cursor.config2dict())
-        self.configure(
-            master_cursor.config2dict()
-        )
+        if not self.locked:
+            self.configure(
+                master_cursor.config2dict()
+            )
 
     def step(self, vector=(1, 0)):
         """ Move cursor within the processor.image.
@@ -166,6 +174,9 @@ class ReturningCursor(Cursor):
     def switch_axis(self):
         self.vector = self.vector[::-1]
         self.share_cursor()
+
+    def switch_hold_axis(self):
+        self.hold_axis = not self.hold_axis
 
     def step(self, custom_delta=None):
         vector = self.vector
