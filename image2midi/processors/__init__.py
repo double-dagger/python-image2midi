@@ -94,7 +94,7 @@ class Cursor(image2midi.config.Configurable):
         self.configure(kwargs)
 
     def share_cursor(self):
-        self.processor.track.player.share_cursor(self.size, self.step_size)
+        self.processor.track.player.share_cursor(self)
 
     def update_size(self, axis, diff):
         self.size[axis] = min(
@@ -122,6 +122,12 @@ class Cursor(image2midi.config.Configurable):
     def update_step_y(self, diff):
         self.update_step(1, diff)
 
+    def update_from_cursor(self, master_cursor):
+        print(master_cursor.config2dict())
+        self.configure(
+            master_cursor.config2dict()
+        )
+
     def step(self, vector=(1, 0)):
         """ Move cursor within the processor.image.
             vector = (1, 0) which means 1 step on X axis.
@@ -147,11 +153,19 @@ class ReturningCursor(Cursor):
     # Flag to stop in currently running row/column
     hold_axis = False
 
-    config_vars = Cursor.config_vars + ['hold_axis',]
+    config_vars = Cursor.config_vars + ['hold_axis', 'vector',]
 
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)
         self.configure(kwargs)
+
+    def switch_direction(self):
+        self.vector = numpy.multiply(self.vector, -1)
+        self.share_cursor()
+
+    def switch_axis(self):
+        self.vector = self.vector[::-1]
+        self.share_cursor()
 
     def step(self, custom_delta=None):
         vector = self.vector

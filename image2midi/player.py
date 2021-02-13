@@ -190,14 +190,11 @@ class Player(object):
     def switch_track(self, d_index):
         self.active_track = min(max(0, self.active_track + d_index), len(self.tracks) - 1)
 
-    def share_cursor(self, size, step_size):
+    def share_cursor(self, cursor):
         if self.shared_cursor:
             for track in self.tracks:
                 if track != self.track():
-                    track.processor.cursor.configure({
-                        'size': size.copy(),
-                        'step_size': step_size.copy(),
-                    })
+                    track.processor.cursor.update_from_cursor(cursor)
 
     def stop_all_notes(self):
         for channel in self.channels:
