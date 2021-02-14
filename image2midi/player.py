@@ -18,24 +18,35 @@ import image2midi.image
 import image2midi.note
 
 class Player(object):
+    # BPM internal clock step
     bpm = None
-    image = None
-    last_time = None
     step_length = 0.0
-    channels = []
     stopped = False
+
+    # Image related
+    image = None
     index_image = 0
-    index_backend = 0
-    switch_dirs_mode = False
+
+    # Exit mode -- todo re-work
     exit_mode = False
     exit_counter = 0
+
+    # All tracks with pointer to current active working track.
     tracks = []
     active_track = 0
+
+    # Run alternate command on MIDI CC
     alt = False
+
+    # Same cursor for all tracks. Except for locked tracks.
     shared_cursor = True
+
+    # Display options
     show_cursor = True
     show_working_image = False
     show_info = True
+
+    __last_time = None
 
     def __init__(self, image_dir, port_name, bpm, config_file, control_channel=None):
         # Setup midi and configuration from command line arguments.
@@ -200,8 +211,9 @@ class Player(object):
                     track.processor.cursor.update_from_cursor(cursor)
 
     def stop_all_notes(self):
-        for channel in self.channels:
+        """ TODO: send to all channels on all tracks.
             channel.stop_all_notes()
+        """
 
     def cleanup(self):
         self.set_bpm(0)
@@ -241,12 +253,8 @@ class Player(object):
             else:
                 self.exit_mode = False
                 self.exit_counter = 0
-        if cc.note == 44:
-            self.switch_dirs_mode = False
 
     def midi_note_on(self, cc):
-        if cc.note == 44:
-            self.switch_dirs_mode = True
         if cc.note == 43:
             self.exit_mode = True
         if cc.note == 42 and self.exit_mode:
@@ -316,9 +324,9 @@ class Player(object):
             track.processor.cursor.restart()
 
     def on_clock(self):
-        if self.last_time is not None:
-            self.step_length = time.time()-self.last_time
-        self.last_time = time.time()
+        if self.__last_time is not None:
+            self.step_length = time.time()-self.__last_time
+        self.__last_time = time.time()
         self.step()
 
     def step(self):
