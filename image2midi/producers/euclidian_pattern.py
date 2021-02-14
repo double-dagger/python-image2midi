@@ -51,7 +51,7 @@ class Producer(image2midi.producers.Producer):
     def get_info(self):
         return (self._name, 'len: {0}'.format(self.pattern_length), 'ste: {0}'.format(self.steps_per_beat or '-'), None, 'nt.: {0}'.format(self.note), self._pattern)
 
-    def gen_pattern(self):
+    def generate_pattern(self):
         # Compute how many active steps from producer value
         self._k = int(self.value * self.pattern_length)
 
@@ -70,7 +70,7 @@ class Producer(image2midi.producers.Producer):
             return
 
         # Generate pattern
-        self.gen_pattern()
+        self.generate_pattern()
 
         if self.steps_per_beat is not None:
             # If steps_per_beat is specified generate pattern which might overlap

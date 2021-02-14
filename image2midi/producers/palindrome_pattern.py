@@ -12,7 +12,7 @@ class Producer(image2midi.producers.euclidian_pattern.Producer):
     """
     _name = 'Palindr'
 
-    def gen_pattern(self):
+    def generate_pattern(self):
         # Compute how many active steps from producer value
         self._k = int(self.value * self.pattern_length)
 
