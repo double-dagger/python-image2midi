@@ -106,7 +106,7 @@ class Track(image2midi.config.Configurable):
         ):
             module = importlib.import_module(modname)
             if self.producer_type is not None and ( not hasattr(module, 'TYPE') or module.TYPE != self.producer_type ):
-                logger.info('Skipping to import module: {0}'.format(module))
+                logger.debug('Skipping to import module: {0}'.format(module))
             else:
                 self.producers.update({
                     modname: module
