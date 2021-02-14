@@ -10,10 +10,6 @@ TYPE='GATE'
 class Producer(image2midi.producers.euclidian_pattern.Producer):
     """
     """
-    pattern_length = 8
-    ## TODO steps_per_beat other than pattern length
-    ## steps_per_beat = 8
-    note = 36
     _name = 'Palindr'
 
     def gen_pattern(self):

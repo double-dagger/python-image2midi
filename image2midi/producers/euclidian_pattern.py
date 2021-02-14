@@ -22,7 +22,6 @@ class Producer(image2midi.producers.Producer):
     """
     """
     pattern_length = 8
-    ## TODO steps_per_beat other than pattern length
     steps_per_beat = None
     note = 36
 
