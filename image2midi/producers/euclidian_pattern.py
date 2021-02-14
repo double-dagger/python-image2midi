@@ -26,6 +26,7 @@ class Producer(image2midi.producers.Producer):
     note = 36
 
     _name = 'Euclid'
+    _k = None
     __in_pattern = False
     config_vars = image2midi.producers.Producer.config_vars + ['pattern_length', 'note', 'steps_per_beat']
 
@@ -49,11 +50,24 @@ class Producer(image2midi.producers.Producer):
             self.steps_per_beat = None
 
     def get_info(self):
-        return (self._name, 'len: {0}'.format(self.pattern_length), 'ste: {0}'.format(self.steps_per_beat or '-'), None, 'nt.: {0}'.format(self.note), self._pattern)
+        return super().get_info() + [
+            'len: {0}'.format(self.pattern_length),
+            'ste: {0}'.format(self.steps_per_beat or '-'),
+            None,
+            'nt.: {0}'.format(self.note),
+            self._pattern
+        ]
+
+    def generate_k(self):
+        last_k = self._k
+
+        self._k = int(self.value * self.pattern_length)
+        if last_k is not None and self.one_step and abs(self._k - last_k) > 1:
+            self._k = max(min(last_k + 1, self._k), last_k - 1)
 
     def generate_pattern(self):
         # Compute how many active steps from producer value
-        self._k = int(self.value * self.pattern_length)
+        self.generate_k()
 
         # Generate Euclidian pattern, flatten and set note
         self._pattern = EuclidianPattern(self._k, self.pattern_length)

@@ -14,7 +14,7 @@ class Producer(image2midi.producers.euclidian_pattern.Producer):
 
     def generate_pattern(self):
         # Compute how many active steps from producer value
-        self._k = int(self.value * self.pattern_length)
+        self.generate_k()
 
         # Generate half Euclidian pattern
         k = int(self._k / 2)
