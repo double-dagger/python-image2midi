@@ -29,5 +29,6 @@ class Producer(image2midi.producers.euclidian_pattern.Producer):
                 patterns.append([0,])
         patterns.append(pattern)
         self._pattern = numpy.concatenate(patterns)
+        self.quantize_pattern()
 
         image2midi.producers.logger.info('Pattern: {0} {1}'.format(self.note, self._pattern))
