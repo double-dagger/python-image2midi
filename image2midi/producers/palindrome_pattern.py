@@ -4,6 +4,8 @@ import twisted.internet.reactor
 
 import image2midi.producers.euclidian_pattern
 
+TYPE='GATE'
+
 
 class Producer(image2midi.producers.euclidian_pattern.Producer):
     """

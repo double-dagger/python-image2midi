@@ -3,6 +3,8 @@ import twisted.internet.reactor
 
 import image2midi.producers
 
+TYPE = 'NOTE'
+
 
 class Producer(image2midi.producers.Producer):
     """

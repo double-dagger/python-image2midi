@@ -8,9 +8,10 @@ logger = logging.getLogger('track')
 import image2midi.note
 import image2midi.processors
 import image2midi.producers
+import image2midi.config
 
 
-class Track(object):
+class Track(image2midi.config.Configurable):
     # Imported available Processor modules / classes
     processors = {}
 
@@ -24,8 +25,13 @@ class Track(object):
     # MIDI channel wrapper for this Track
     channel = None
 
-    def __init__(self, parent, channel_number, producer_config=dict(), processor_config=dict()):
+    channel_number = 0
+    producer_type = None
+    config_vars = ['channel_number', 'producer_type']
+
+    def __init__(self, parent, **kwargs):
         self.player = parent
+        super().configure(kwargs)
 
         # Import all available processor / producer modules
         self.import_processors()
@@ -34,12 +40,12 @@ class Track(object):
         logger.info('Track.producers loaded: {0}'.format(self.producers.keys()))
 
         # Setup channel wrapper on specified MIDI channel
-        self.channel = image2midi.note.NoteChannel(self, channel_number)
+        self.channel = image2midi.note.NoteChannel(self, self.channel_number)
 
         # Setup processor / producer from specified values, fallback to
         # first available value as default
-        self.init_processor(processor_config)
-        self.init_producer(producer_config)
+        self.init_processor(kwargs.get('processor_config'))
+        self.init_producer(kwargs.get('producer_config'))
 
     def init_processor(self, processor_config):
         if processor_config.get('processor') in self.processors.keys():
@@ -56,8 +62,7 @@ class Track(object):
     def configure(self, kwargs):
         """ Custom (re)configuration method
         """
-        if 'channel_number' in kwargs.keys():
-            self.channel.channel_number = kwargs.get('channel_number')
+        super().configure(kwargs)
         if 'processor_config' in kwargs.keys():
             self.init_processor(kwargs.get('processor_config'))
         if 'producer_config' in kwargs.keys():
@@ -94,13 +99,18 @@ class Track(object):
     def import_producers(self):
         """ Find available Producer providing modules.
         """
+        self.producers = {}
         for _, modname, _ in pkgutil.walk_packages(
             image2midi.producers.__path__,
             image2midi.producers.__name__ + '.'
         ):
-            self.producers.update({
-                modname: importlib.import_module(modname)
-            })
+            module = importlib.import_module(modname)
+            if self.producer_type is not None and ( not hasattr(module, 'TYPE') or module.TYPE != self.producer_type ):
+                logger.info('Skipping to import module: {0}'.format(module))
+            else:
+                self.producers.update({
+                    modname: module
+                })
 
     def step(self):
         """ Perform track step. Will be called every BPM cycle from player.

@@ -6,6 +6,8 @@ logger = logging.getLogger('producer')
 
 import image2midi.producers
 
+TYPE='GATE'
+
 
 def EuclidianPattern(k, n):
     pattern = [[1]] * k + [[0]] * (n - k)
